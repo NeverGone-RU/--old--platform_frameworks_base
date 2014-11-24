@@ -301,6 +301,8 @@ public class WindowManagerService extends IWindowManager.Stub
     private static final String DENSITY_OVERRIDE = "ro.config.density_override";
     private static final String SIZE_OVERRIDE = "ro.config.size_override";
 
+    private static final String FORCE_TABLET_UI = "ro.config.force_tablet_ui";
+
     private static final int MAX_SCREENSHOT_RETRIES = 3;
 
     private static final String PROPERTY_EMULATOR_CIRCULAR = "ro.emulator.circular";
@@ -7245,7 +7247,14 @@ public class WindowManagerService extends IWindowManager.Stub
         sl = reduceConfigLayout(sl, Surface.ROTATION_90, density, unrotDh, unrotDw);
         sl = reduceConfigLayout(sl, Surface.ROTATION_180, density, unrotDw, unrotDh);
         sl = reduceConfigLayout(sl, Surface.ROTATION_270, density, unrotDh, unrotDw);
-        outConfig.smallestScreenWidthDp = (int)(displayInfo.smallestNominalAppWidth / density);
+
+        boolean forceTabletUi = SystemProperties.getBoolean(FORCE_TABLET_UI, false);
+        if (forceTabletUi) {
+            outConfig.smallestScreenWidthDp = 721; //tablet ui for all
+        } else {
+            outConfig.smallestScreenWidthDp = (int)(displayInfo.smallestNominalAppWidth / density);
+        }
+
         outConfig.screenLayout = sl;
     }
 
