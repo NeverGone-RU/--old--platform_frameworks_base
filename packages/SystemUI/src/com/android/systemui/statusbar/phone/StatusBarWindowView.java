@@ -25,10 +25,16 @@ import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.media.session.MediaSessionLegacyHelper;
 import android.os.IBinder;
+import android.os.IPowerManager;
+import android.os.PowerManager;
+import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.util.AttributeSet;
+import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewRootImpl;
 import android.view.WindowManager;
 import android.view.WindowManagerGlobal;
@@ -53,11 +59,17 @@ public class StatusBarWindowView extends FrameLayout {
     PhoneStatusBar mService;
     private final Paint mTransparentSrcPaint = new Paint();
 
+    private int mStatusBarHeaderHeight;
+
+    private GestureDetector mDoubleTapGesture;
+
     public StatusBarWindowView(Context context, AttributeSet attrs) {
         super(context, attrs);
         setMotionEventSplittingEnabled(false);
         mTransparentSrcPaint.setColor(0);
         mTransparentSrcPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
+        mStatusBarHeaderHeight = context
+                .getResources().getDimensionPixelSize(R.dimen.status_bar_header_height);
     }
 
     @Override
@@ -88,6 +100,16 @@ public class StatusBarWindowView extends FrameLayout {
     @Override
     protected void onAttachedToWindow () {
         super.onAttachedToWindow();
+
+        mDoubleTapGesture = new GestureDetector(mContext, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+                if(pm != null)
+                    pm.goToSleep(e.getEventTime());
+                return true;
+            }
+        });
 
         mStackScrollLayout = (NotificationStackScrollLayout) findViewById(
                 R.id.notification_stack_scroller);
@@ -165,6 +187,9 @@ public class StatusBarWindowView extends FrameLayout {
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         boolean intercept = false;
+        if (ev.getY() < mStatusBarHeaderHeight) {
+            mDoubleTapGesture.onTouchEvent(ev);
+        }
         if (mNotificationPanel.isFullyExpanded()
                 && mStackScrollLayout.getVisibility() == View.VISIBLE
                 && mService.getBarState() == StatusBarState.KEYGUARD
